@@ -1,0 +1,5 @@
+package idris2-hvm
+depends = idris2, prelude, base, contrib
+sourcedir = "src"
+main = Main
+executable = idris2-hvm

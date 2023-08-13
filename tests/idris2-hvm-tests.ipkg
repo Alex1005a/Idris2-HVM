@@ -1,0 +1,4 @@
+package idris2-hvm-tests
+depends = contrib, test
+main = Main
+executable = idris2-hvm-tests
