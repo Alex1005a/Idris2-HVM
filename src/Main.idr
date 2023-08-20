@@ -47,11 +47,26 @@ predefined =
 
   (StrHead (Data.String.cons x _)) = x
 
+  (StrTail (Data.String.cons _ xs)) = xs
+
   (StrLen (Data.String.cons _ xs)) = (+ 1 (StrLen xs))
   (StrLen Data.String.nil) = 0
 
+  (StrRev str (Data.String.cons x xs)) = (StrRev (Data.String.cons x str) xs)
+  (StrRev str Data.String.nil) = str
+
   (StrIdx (Data.String.cons x xs) 0) = x
   (StrIdx (Data.String.cons _ xs) idx) = (StrIdx xs (- idx 1))
+
+  (StrSkip 0 str) = str
+  (StrSkip n Data.String.nil) = Data.String.nil
+  (StrSkip n (Data.String.cons x xs)) = (StrSkip (- n 1) xs)
+
+  (StrTake 0 _) = Data.String.nil
+  (StrTake n Data.String.nil) = Data.String.nil
+  (StrTake n (Data.String.cons x xs)) = (Data.String.cons x (StrTake (- n 1) xs))
+
+  (StrSubstr start len str) = (StrTake len (StrSkip start str))
 
   (Unpack (Data.String.cons x xs)) = (Prelude.Basics..colon.colon x (Unpack xs))
   (Unpack Data.String.nil) = Prelude.Basics.Nil
@@ -161,8 +176,11 @@ hvmPrimFn : PrimFn ar -> Vect ar Builder -> Builder
 hvmPrimFn StrAppend [x, y] = "String.concat " ++ x ++ " " ++ y
 hvmPrimFn StrCons [x, y] = "Data.String.cons " ++ x ++ " " ++ y
 hvmPrimFn StrHead [x] = "StrHead " ++ x
+hvmPrimFn StrTail [x] = "StrTail " ++ x
+hvmPrimFn StrReverse [x] = "StrRev Data.String.nil " ++ x
 hvmPrimFn StrLength [x] = "StrLen " ++ x
 hvmPrimFn StrIndex [x, y] = "StrIdx " ++ x ++ " " ++ y
+hvmPrimFn StrSubstr [x, y, z] = "StrSubstr " ++ x ++ " " ++ y ++ " " ++ z
 hvmPrimFn BelieveMe [_, _, x] = x
 hvmPrimFn (Cast IntType StringType) [x] = "ToString " ++ x
 hvmPrimFn (Cast IntegerType StringType) [x] = "ToString " ++ x
