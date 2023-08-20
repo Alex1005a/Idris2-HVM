@@ -33,6 +33,18 @@ predefined =
   (String.concat Data.String.nil         ys) = ys
   (String.concat (Data.String.cons x xs) ys) = (Data.String.cons x (String.concat xs ys))
 
+  (ToString 0) = "0"
+  (ToString 1) = "1"
+  (ToString 2) = "2"
+  (ToString 3) = "3"
+  (ToString 4) = "4"
+  (ToString 5) = "5"
+  (ToString 6) = "6"
+  (ToString 7) = "7"
+  (ToString 8) = "8"
+  (ToString 9) = "9"
+  (ToString num) = (String.concat (ToString (/ num 10)) (ToString (% num 10)))
+
   (StrHead (Data.String.cons x _)) = x
 
   (StrLen (Data.String.cons _ xs)) = (+ 1 (StrLen xs))
@@ -152,13 +164,23 @@ hvmPrimFn StrHead [x] = "StrHead " ++ x
 hvmPrimFn StrLength [x] = "StrLen " ++ x
 hvmPrimFn StrIndex [x, y] = "StrIdx " ++ x ++ " " ++ y
 hvmPrimFn BelieveMe [_, _, x] = x
-hvmPrimFn (Cast IntType StringType) [x] = x
+hvmPrimFn (Cast IntType StringType) [x] = "ToString " ++ x
+hvmPrimFn (Cast IntegerType StringType) [x] = "ToString " ++ x
 hvmPrimFn (Cast IntType IntegerType) [x] = x
 hvmPrimFn (Cast IntegerType IntType) [x] = x
 hvmPrimFn (Cast IntType CharType) [x] = x
 hvmPrimFn (Cast CharType IntType) [x] = x
 hvmPrimFn (Cast CharType IntegerType) [x] = x
+hvmPrimFn (Add ty) [x, y] = "+ " ++ x ++ " " ++ y
 hvmPrimFn (Sub ty) [x, y] = "- " ++ x ++ " " ++ y
+hvmPrimFn (Mul ty) [x, y] = "* " ++ x ++ " " ++ y
+hvmPrimFn (Div ty) [x, y] = "/ " ++ x ++ " " ++ y
+hvmPrimFn (Mod ty) [x, y] = "% " ++ x ++ " " ++ y
+hvmPrimFn (BAnd ty) [x, y] = "& " ++ x ++ " " ++ y
+hvmPrimFn (BOr ty) [x, y] = "| " ++ x ++ " " ++ y
+hvmPrimFn (BXOr ty) [x, y] = "^ " ++ x ++ " " ++ y
+hvmPrimFn (ShiftL ty) [x, y] = "<< " ++ x ++ " " ++ y
+hvmPrimFn (ShiftR ty) [x, y] = ">> " ++ x ++ " " ++ y
 hvmPrimFn (LT ty) [x, y] = "< " ++ x ++ " " ++ y
 hvmPrimFn (LTE ty) [x, y] = "<= " ++ x ++ " " ++ y
 hvmPrimFn (EQ ty) [x, y] = "== " ++ x ++ " " ++ y
@@ -176,17 +198,18 @@ hvmArgs arg (S n) = arg ++ (singleton $ show n) ++ " " ++ hvmArgs arg n
 
 mutual
   hvmCase :  {auto defs : Ref Ctxt Defs}
-              -> {auto cons : ConsInfo}
-              -> {auto mdef : Maybe NamedCExp} 
-              -> List (Nat, Name)
-              -> List NamedConAlt 
-              -> Core Builder
+          -> {auto cons : ConsInfo}
+          -> {auto mdef : Maybe NamedCExp} 
+          -> List (Nat, Name)
+          -> List NamedConAlt 
+          -> Core Builder
   hvmCase [] _ = pure ""
   hvmCase ((arity, con) :: rest) alts =
     case altByCon con alts of
       (Just (MkNConAlt _ ci tag args exp), restAlts) =>
         pure $ "(" ++ hvmLam args ++ !(hvmCExp exp) ++ ") " ++ !(hvmCase rest restAlts)
       (Nothing, restAlts) =>
+        -- If there is no case for the given constructor, then use default 
         pure $ "(" ++ sepBy " " (replicate arity "λ_") ++ " " ++ !(maybe (pure "NotCoveredCase") hvmCExp mdef) ++ ") " ++ !(hvmCase rest restAlts) 
 
   hvmCExp :  {auto defs : Ref Ctxt Defs}
@@ -276,7 +299,7 @@ conTypeAndArity name (MkNmCon tag arity nt) = do
       _ => pure Nothing
 conTypeAndArity {} = pure Nothing
 
-||| Creating a matching function that takes scrutinee as the first argument, 
+||| Creating a matching rule that takes scrutinee as the first argument, 
 ||| followed by a continuation function for different cases
 hvmMatchFunction : Builder -> Nat -> List (Nat, Name) -> Builder
 hvmMatchFunction name covered ((arity, con) :: rest) =

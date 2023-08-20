@@ -1,0 +1,3 @@
+../../.././build/exec/idris2-hvm --exec main Main.idr
+
+rm -rf build
